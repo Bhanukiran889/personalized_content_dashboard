@@ -3,6 +3,7 @@ import { fetchNews } from '@/api/newsApi';
 import { fetchTrendingMovies } from '@/api/tmdbApi';
 import { NewsArticle, TmdbMovie } from '@/types/content';
 import { RootState } from '@/store'; // To access preferences from other slices
+import axios from 'axios'; // Import axios to get its type for error handling
 
 interface ContentState {
   news: NewsArticle[];
@@ -36,8 +37,11 @@ export const getNews = createAsyncThunk(
     try {
       const response = await fetchNews(categories, currentPage);
       return response.articles;
-    } catch (error: any) {
-      return rejectWithValue(error.message || 'Failed to fetch news');
+    } catch (error) { // No 'any' here
+      if (axios.isAxiosError(error)) { // Check if it's an Axios error
+        return rejectWithValue(error.response?.data?.message || error.message || 'Failed to fetch news');
+      }
+      return rejectWithValue('An unexpected error occurred while fetching news.');
     }
   }
 );
@@ -51,8 +55,11 @@ export const getTrendingMovies = createAsyncThunk(
     try {
       const response = await fetchTrendingMovies(currentPage);
       return response.results;
-    } catch (error: any) {
-      return rejectWithValue(error.message || 'Failed to fetch movies');
+    } catch (error) { // No 'any' here
+      if (axios.isAxiosError(error)) { // Check if it's an Axios error
+        return rejectWithValue(error.response?.data?.status_message || error.message || 'Failed to fetch movies');
+      }
+      return rejectWithValue('An unexpected error occurred while fetching movies.');
     }
   }
 );
@@ -61,7 +68,6 @@ const contentSlice = createSlice({
   name: 'content',
   initialState,
   reducers: {
-    // This will be useful for resetting content, e.g., on preference change
     resetContent: (state) => {
       state.news = [];
       state.movies = [];
@@ -70,7 +76,6 @@ const contentSlice = createSlice({
       state.hasMoreNews = true;
       state.hasMoreMovies = true;
     },
-    // For infinite scrolling, manually increment pages if more data is available
     incrementNewsPage: (state) => {
       state.newsPage += 1;
     },
@@ -87,8 +92,8 @@ const contentSlice = createSlice({
       })
       .addCase(getNews.fulfilled, (state, action: PayloadAction<NewsArticle[]>) => {
         state.loading = false;
-        state.news = [...state.news, ...action.payload]; // Append new data
-        state.hasMoreNews = action.payload.length > 0; // If no new data, no more pages
+        state.news = [...state.news, ...action.payload];
+        state.hasMoreNews = action.payload.length > 0;
       })
       .addCase(getNews.rejected, (state, action) => {
         state.loading = false;
@@ -101,8 +106,8 @@ const contentSlice = createSlice({
       })
       .addCase(getTrendingMovies.fulfilled, (state, action: PayloadAction<TmdbMovie[]>) => {
         state.loading = false;
-        state.movies = [...state.movies, ...action.payload]; // Append new data
-        state.hasMoreMovies = action.payload.length > 0; // If no new data, no more pages
+        state.movies = [...state.movies, ...action.payload];
+        state.hasMoreMovies = action.payload.length > 0;
       })
       .addCase(getTrendingMovies.rejected, (state, action) => {
         state.loading = false;

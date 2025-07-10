@@ -1,26 +1,129 @@
-import DarkModeToggle from '@/components/ui/DarkModeToggle';
+import React, { useEffect } from 'react';
 import Head from 'next/head';
+import { useDispatch, useSelector } from 'react-redux';
+import { AppDispatch, RootState } from '@/store';
+import { getNews, getTrendingMovies } from '@/store/features/content/contentSlice';
+import DarkModeToggle from '@/components/ui/DarkModeToggle';
+
+// Basic ContentCard component (now with enhanced styling)
+const ContentCard: React.FC<{ title: string; description?: string | null; imageUrl?: string | null; url?: string }> = ({
+  title,
+  description,
+  imageUrl,
+  url,
+}) => {
+  return (
+    <div className="
+      bg-white dark:bg-gray-800 rounded-xl shadow-lg p-5 mb-4
+      transform hover:scale-102 hover:shadow-xl
+      transition-all duration-300 ease-in-out
+      flex flex-col
+    ">
+      {imageUrl && (
+        <img
+          src={imageUrl}
+          alt={title}
+          className="w-full h-48 object-cover rounded-lg mb-4 shadow-sm"
+          onError={(e) => { e.currentTarget.src = 'https://placehold.co/600x400/E0E0E0/333333?text=Image+Not+Found'; }} // Fallback image
+        />
+      )}
+      <h3 className="text-xl font-semibold mb-2 text-gray-900 dark:text-gray-100 leading-tight">
+        {title}
+      </h3>
+      {description && (
+        <p className="text-gray-600 dark:text-gray-300 text-sm mb-4 line-clamp-3 flex-grow">
+          {description}
+        </p>
+      )}
+      {url && (
+        <a
+          href={url}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="
+            inline-block mt-auto
+            bg-indigo-600 hover:bg-indigo-700
+            text-white font-medium py-2 px-4 rounded-full
+            transition-all duration-300 ease-in-out
+            text-center text-sm
+            shadow-md hover:shadow-lg
+          "
+        >
+          Read More / View Details
+        </a>
+      )}
+    </div>
+  );
+};
 
 export default function Home() {
+  const dispatch: AppDispatch = useDispatch();
+  const { news, movies, loading, error } = useSelector((state: RootState) => state.content);
+  const favoriteCategories = useSelector((state: RootState) => state.preferences.favoriteCategories);
+
+  useEffect(() => {
+    dispatch(getNews());
+    dispatch(getTrendingMovies());
+  }, [dispatch, favoriteCategories]);
+
   return (
-    <div className="min-h-screen bg-gray-100 dark:bg-gray-900 text-gray-900 dark:text-gray-100 transition-colors duration-200">
+    <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-200 dark:from-gray-950 dark:to-gray-800 text-gray-900 dark:text-gray-100 transition-colors duration-300">
       <Head>
         <title>Personalized Content Dashboard</title>
         <meta name="description" content="Your personalized content feed" />
         <link rel="icon" href="/favicon.ico" />
       </Head>
 
-      <header className="py-4 px-6 flex justify-between items-center bg-white dark:bg-gray-800 shadow-md">
-        <h1 className="text-2xl font-bold">My Dashboard</h1>
+      <header className="
+        py-5 px-8 flex justify-between items-center
+        bg-white dark:bg-gray-800 shadow-xl
+        rounded-b-2xl
+        sticky top-0 z-10
+      ">
+        <h1 className="text-3xl font-bold text-indigo-700 dark:text-indigo-400">
+          My Dashboard
+        </h1>
         <DarkModeToggle />
       </header>
 
-      <main className="container mx-auto p-6">
-        <h2 className="text-3xl font-semibold mb-6">Welcome!</h2>
-        <p className="text-lg">
-          This is your personalized content feed. Try toggling dark mode!
-        </p>
-        {/* Content will go here */}
+      <main className="container mx-auto p-8">
+        <h2 className="text-4xl font-bold mb-8 text-center text-indigo-800 dark:text-indigo-300">
+          Your Personalized Feed
+        </h2>
+
+        {loading && (
+          <div className="flex justify-center items-center py-10">
+            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-indigo-500"></div>
+            <p className="ml-4 text-lg text-gray-600 dark:text-gray-300">Loading amazing content...</p>
+          </div>
+        )}
+        {error && <p className="text-center text-red-500 text-lg font-medium">Error: {error}</p>}
+
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-8">
+          {news.map((article) => (
+            <ContentCard
+              key={article.url}
+              title={article.title}
+              description={article.description}
+              imageUrl={article.urlToImage}
+              url={article.url}
+            />
+          ))}
+          {movies.map((movie) => (
+            <ContentCard
+              key={movie.id}
+              title={movie.title}
+              description={movie.overview}
+              imageUrl={movie.poster_path}
+              url={`https://www.themoviedb.org/movie/${movie.id}`}
+            />
+          ))}
+          {!loading && news.length === 0 && movies.length === 0 && !error && (
+            <p className="col-span-full text-center text-gray-500 dark:text-gray-400 text-lg py-10">
+              No content available. Please ensure your API keys are correct and try again.
+            </p>
+          )}
+        </div>
       </main>
     </div>
   );
