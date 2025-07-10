@@ -1,9 +1,9 @@
 // src/store/features/content/contentSlice.ts
 import { createSlice, createAsyncThunk, PayloadAction } from '@reduxjs/toolkit';
 import axios from 'axios';
-import { RootState } from '@/store'; // Import RootState to access preferences
+import { RootState } from '@/store';
 
-// ... (other types like Article, Movie, ContentState as before)
+// ... (existing Article and Movie interfaces)
 export interface Article {
   source: {
     id: string | null;
@@ -27,9 +27,12 @@ export interface Movie {
   vote_average: number;
 }
 
+
 interface ContentState {
   news: Article[];
   movies: Movie[];
+  searchResultsNews: Article[]; // New: for search results
+  searchResultsMovies: Movie[]; // New: for search results
   loading: boolean;
   error: string | null;
 }
@@ -37,84 +40,143 @@ interface ContentState {
 const initialState: ContentState = {
   news: [],
   movies: [],
+  searchResultsNews: [], // Initialize
+  searchResultsMovies: [], // Initialize
   loading: false,
   error: null,
 };
 
-// Update getNews to accept categories
+// ... (getNews and getTrendingMovies remain the same as in previous step)
 export const getNews = createAsyncThunk<Article[], void, { state: RootState }>(
-  'content/getNews',
-  async (_, { rejectWithValue, getState }) => {
-    const state = getState();
-    const categories = state.preferences.favoriteCategories;
+    'content/getNews',
+    async (_, { rejectWithValue, getState }) => {
+        const state = getState();
+        const categories = state.preferences.favoriteCategories;
+        const NEWS_API_KEY = process.env.NEXT_PUBLIC_NEWS_API_KEY;
+        const NEWS_API_BASE_URL = 'https://newsapi.org/v2/top-headlines';
+
+        if (!NEWS_API_KEY) {
+            console.error("NEWS_API_KEY is not defined!");
+            return rejectWithValue("News API Key is not configured.");
+        }
+
+        let url = `${NEWS_API_BASE_URL}?language=en&pageSize=20&apiKey=${NEWS_API_KEY}`;
+
+        if (categories && categories.length > 0) {
+            const categoryQueries = categories.map(cat => `category=${cat}`).join('&');
+            url = `${NEWS_API_BASE_URL}?language=en&pageSize=20&${categoryQueries}&apiKey=${NEWS_API_KEY}`;
+        } else {
+            url = `${NEWS_API_BASE_URL}?language=en&pageSize=20&apiKey=${NEWS_API_KEY}`;
+        }
+
+        try {
+            const response = await axios.get<{ articles: Article[] }>(url);
+            return response.data.articles.filter(article => article.title !== "[Removed]");
+        } catch (error) {
+            if (axios.isAxiosError(error) && error.response) {
+                return rejectWithValue(error.response.data.message || "Failed to fetch news");
+            }
+            return rejectWithValue("An unknown error occurred");
+        }
+    }
+);
+
+export const getTrendingMovies = createAsyncThunk<Movie[], void, { state: RootState }>(
+    'content/getTrendingMovies',
+    async (_, { rejectWithValue }) => {
+        const TMDB_API_KEY = process.env.NEXT_PUBLIC_TMDB_API_KEY;
+        const TMDB_TRENDING_URL = 'https://api.themoviedb.org/3/trending/movie/week';
+
+        if (!TMDB_API_KEY) {
+            console.error("TMDB_API_KEY is not defined!");
+            return rejectWithValue("TMDB API Key is not configured.");
+        }
+
+        try {
+            const response = await axios.get<{ results: Movie[] }>(`${TMDB_TRENDING_URL}?api_key=${TMDB_API_KEY}`);
+            return response.data.results;
+        } catch (error) {
+            if (axios.isAxiosError(error) && error.response) {
+                return rejectWithValue(error.response.data.status_message || "Failed to fetch trending movies");
+            }
+            return rejectWithValue("An unknown error occurred");
+        }
+    }
+);
+
+
+// New: Async Thunk for searching news
+export const searchNews = createAsyncThunk<Article[], string, { state: RootState }>(
+  'content/searchNews',
+  async (query, { rejectWithValue }) => {
     const NEWS_API_KEY = process.env.NEXT_PUBLIC_NEWS_API_KEY;
-    const NEWS_API_BASE_URL = 'https://newsapi.org/v2/top-headlines';
+    const NEWS_API_SEARCH_URL = 'https://newsapi.org/v2/everything'; // Use 'everything' for search
 
     if (!NEWS_API_KEY) {
       console.error("NEWS_API_KEY is not defined!");
       return rejectWithValue("News API Key is not configured.");
     }
-
-    let url = `${NEWS_API_BASE_URL}?language=en&pageSize=20&apiKey=${NEWS_API_KEY}`;
-
-    if (categories && categories.length > 0) {
-      // If categories are selected, fetch news for each and combine
-      const categoryQueries = categories.map(cat => `category=${cat}`).join('&');
-      url = `${NEWS_API_BASE_URL}?language=en&pageSize=20&${categoryQueries}&apiKey=${NEWS_API_KEY}`;
-      // Note: NewsAPI free tier might not allow multiple categories in one query.
-      // For more robust filtering, you might need to make multiple requests or
-      // filter on the client side if the API doesn't support combined queries well.
-      // For simplicity, we'll try to add them as query params.
-      // For true 'OR' logic across categories, you might need to fetch for each and merge/deduplicate.
-    } else {
-        // If no categories selected, fetch general top headlines or a default
-        url = `${NEWS_API_BASE_URL}?language=en&pageSize=20&apiKey=${NEWS_API_KEY}`;
+    if (!query) {
+      return rejectWithValue("Search query cannot be empty.");
     }
 
-
     try {
-      const response = await axios.get<{ articles: Article[] }>(url);
+      const response = await axios.get<{ articles: Article[] }>(
+        `${NEWS_API_SEARCH_URL}?q=${encodeURIComponent(query)}&language=en&pageSize=20&apiKey=${NEWS_API_KEY}`
+      );
       return response.data.articles.filter(article => article.title !== "[Removed]");
     } catch (error) {
       if (axios.isAxiosError(error) && error.response) {
-        return rejectWithValue(error.response.data.message || "Failed to fetch news");
+        return rejectWithValue(error.response.data.message || "Failed to search news");
       }
-      return rejectWithValue("An unknown error occurred");
+      return rejectWithValue("An unknown error occurred during news search");
     }
   }
 );
 
-// ... (getTrendingMovies remains the same)
-export const getTrendingMovies = createAsyncThunk<Movie[], void, { state: RootState }>(
-  'content/getTrendingMovies',
-  async (_, { rejectWithValue }) => {
+// New: Async Thunk for searching movies
+export const searchMovies = createAsyncThunk<Movie[], string, { state: RootState }>(
+  'content/searchMovies',
+  async (query, { rejectWithValue }) => {
     const TMDB_API_KEY = process.env.NEXT_PUBLIC_TMDB_API_KEY;
-    const TMDB_TRENDING_URL = 'https://api.themoviedb.org/3/trending/movie/week';
+    const TMDB_SEARCH_URL = 'https://api.themoviedb.org/3/search/movie';
 
     if (!TMDB_API_KEY) {
       console.error("TMDB_API_KEY is not defined!");
       return rejectWithValue("TMDB API Key is not configured.");
     }
+    if (!query) {
+      return rejectWithValue("Search query cannot be empty.");
+    }
 
     try {
-      const response = await axios.get<{ results: Movie[] }>(`${TMDB_TRENDING_URL}?api_key=${TMDB_API_KEY}`);
+      const response = await axios.get<{ results: Movie[] }>(
+        `${TMDB_SEARCH_URL}?api_key=${TMDB_API_KEY}&query=${encodeURIComponent(query)}`
+      );
       return response.data.results;
     } catch (error) {
       if (axios.isAxiosError(error) && error.response) {
-        return rejectWithValue(error.response.data.status_message || "Failed to fetch trending movies");
+        return rejectWithValue(error.response.data.status_message || "Failed to search movies");
       }
-      return rejectWithValue("An unknown error occurred");
+      return rejectWithValue("An unknown error occurred during movie search");
     }
   }
 );
 
+
 const contentSlice = createSlice({
   name: 'content',
   initialState,
-  reducers: {},
+  reducers: {
+    clearSearchResults: (state) => { // New reducer to clear results
+      state.searchResultsNews = [];
+      state.searchResultsMovies = [];
+      state.error = null;
+    }
+  },
   extraReducers: (builder) => {
     builder
-      // News
+      // ... (existing getNews and getTrendingMovies cases)
       .addCase(getNews.pending, (state) => {
         state.loading = true;
         state.error = null;
@@ -126,9 +188,8 @@ const contentSlice = createSlice({
       .addCase(getNews.rejected, (state, action) => {
         state.loading = false;
         state.error = action.payload as string;
-        state.news = []; // Clear news on error
+        state.news = [];
       })
-      // Movies
       .addCase(getTrendingMovies.pending, (state) => {
         state.loading = true;
         state.error = null;
@@ -140,9 +201,42 @@ const contentSlice = createSlice({
       .addCase(getTrendingMovies.rejected, (state, action) => {
         state.loading = false;
         state.error = action.payload as string;
-        state.movies = []; // Clear movies on error
+        state.movies = [];
+      })
+
+      // NEW: Search News
+      .addCase(searchNews.pending, (state) => {
+        state.loading = true;
+        state.error = null;
+        state.searchResultsNews = []; // Clear previous results
+      })
+      .addCase(searchNews.fulfilled, (state, action: PayloadAction<Article[]>) => {
+        state.loading = false;
+        state.searchResultsNews = action.payload;
+      })
+      .addCase(searchNews.rejected, (state, action) => {
+        state.loading = false;
+        state.error = action.payload as string;
+        state.searchResultsNews = [];
+      })
+
+      // NEW: Search Movies
+      .addCase(searchMovies.pending, (state) => {
+        state.loading = true;
+        state.error = null;
+        state.searchResultsMovies = []; // Clear previous results
+      })
+      .addCase(searchMovies.fulfilled, (state, action: PayloadAction<Movie[]>) => {
+        state.loading = false;
+        state.searchResultsMovies = action.payload;
+      })
+      .addCase(searchMovies.rejected, (state, action) => {
+        state.loading = false;
+        state.error = action.payload as string;
+        state.searchResultsMovies = [];
       });
   },
 });
 
+export const { clearSearchResults } = contentSlice.actions; // Export the new action
 export default contentSlice.reducer;
