@@ -1,9 +1,8 @@
+// src/store/features/favorites/favoritesSlice.ts
 import { createSlice, PayloadAction } from '@reduxjs/toolkit';
-import { Article } from '../content/contentSlice'; // Assuming Article type is needed
-import { Movie } from '../content/contentSlice'; // Assuming Movie type is needed
+// Assuming Article and Movie types are already defined in contentSlice
+// import { Article, Movie } from '../content/contentSlice'; // uncomment if you need them directly here for types
 
-// Define a type for a favorited item
-// It should contain enough info to display it consistently
 interface FavoriteItem {
   id: string; // Unique identifier (e.g., URL for news, TMDB ID for movie)
   type: 'news' | 'movie';
@@ -11,15 +10,31 @@ interface FavoriteItem {
   description?: string | null;
   imageUrl?: string | null;
   url?: string;
-  // Add other properties if needed for display or re-fetching
 }
 
 interface FavoritesState {
   items: FavoriteItem[];
 }
 
+// Function to load state from localStorage
+const loadFavoritesFromLocalStorage = (): FavoriteItem[] => {
+  if (typeof window !== 'undefined') { // Check if window object is available (i.e., not during SSR)
+    try {
+      const serializedState = localStorage.getItem('favorites');
+      if (serializedState === null) {
+        return []; // No favorites found, return empty array
+      }
+      return JSON.parse(serializedState);
+    } catch (e) {
+      console.error("Could not load favorites from localStorage", e);
+      return [];
+    }
+  }
+  return []; // Return empty array if not in browser environment
+};
+
 const initialState: FavoritesState = {
-  items: [],
+  items: loadFavoritesFromLocalStorage(), // Initialize state by loading from localStorage
 };
 
 const favoritesSlice = createSlice({
@@ -27,7 +42,6 @@ const favoritesSlice = createSlice({
   initialState,
   reducers: {
     addFavorite: (state, action: PayloadAction<FavoriteItem>) => {
-      // Prevent adding duplicates
       if (!state.items.some(item => item.id === action.payload.id)) {
         state.items.push(action.payload);
       }
@@ -35,10 +49,6 @@ const favoritesSlice = createSlice({
     removeFavorite: (state, action: PayloadAction<string>) => {
       state.items = state.items.filter(item => item.id !== action.payload);
     },
-    // Optional: Load favorites from local storage (will implement later if needed)
-    // setFavorites: (state, action: PayloadAction<FavoriteItem[]>) => {
-    //   state.items = action.payload;
-    // },
   },
 });
 

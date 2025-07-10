@@ -1,19 +1,20 @@
+// src/store/index.ts
 import { configureStore } from '@reduxjs/toolkit';
 import preferencesReducer from './features/preferences/preferencesSlice';
 import contentReducer from './features/content/contentSlice';
-import favoritesReducer from './features/favorites/favoritesSlice'; // Assuming you have a content slice
+import favoritesReducer from './features/favorites/favoritesSlice';
+import { listenerMiddleware } from './listeners'; // Import your listener middleware
 
 export const store = configureStore({
   reducer: {
     preferences: preferencesReducer,
     content: contentReducer,
-    
     favorites: favoritesReducer,
   },
-  // Optional: Add middleware, devtools config, etc.
+  // Add the listener middleware to your store's middleware
+  middleware: (getDefaultMiddleware) =>
+    getDefaultMiddleware().prepend(listenerMiddleware.middleware),
 });
 
-// Infer the `RootState` and `AppDispatch` types from the store itself
 export type RootState = ReturnType<typeof store.getState>;
-// Inferred type: {posts: PostsState, comments: CommentsState, users: UsersState}
 export type AppDispatch = typeof store.dispatch;
