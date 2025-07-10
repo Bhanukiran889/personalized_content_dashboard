@@ -2,8 +2,6 @@ import axios from 'axios';
 import { TmdbMovie } from '@/types/content';
 
 const TMDB_API_KEY = process.env.NEXT_PUBLIC_TMDB_API_KEY;
-
-console.log('TMDB API Key being used:', TMDB_API_KEY);
 const TMDB_BASE_URL = 'https://api.themoviedb.org/3';
 const TMDB_IMAGE_BASE_URL = 'https://image.tmdb.org/t/p/w500'; // For movie posters
 

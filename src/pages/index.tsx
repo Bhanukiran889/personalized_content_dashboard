@@ -3,10 +3,9 @@ import Head from 'next/head';
 import { useDispatch, useSelector } from 'react-redux';
 import { AppDispatch, RootState } from '@/store';
 import { getNews, getTrendingMovies } from '@/store/features/content/contentSlice';
-import DarkModeToggle from '@/components/ui/DarkModeToggle';
 
-// Basic ContentCard component (now with enhanced styling)
-const ContentCard: React.FC<{ title: string; description?: string | null; imageUrl?: string | null; url?: string }> = ({
+// ContentCard component (no changes needed here, it's reused)
+ export const ContentCard: React.FC<{ title: string; description?: string | null; imageUrl?: string | null; url?: string }> = ({
   title,
   description,
   imageUrl,
@@ -24,7 +23,7 @@ const ContentCard: React.FC<{ title: string; description?: string | null; imageU
           src={imageUrl}
           alt={title}
           className="w-full h-48 object-cover rounded-lg mb-4 shadow-sm"
-          onError={(e) => { e.currentTarget.src = 'https://placehold.co/600x400/E0E0E0/333333?text=Image+Not+Found'; }} // Fallback image
+          onError={(e) => { e.currentTarget.src = 'https://placehold.co/600x400/E0E0E0/333333?text=Image+Not+Found'; }}
         />
       )}
       <h3 className="text-xl font-semibold mb-2 text-gray-900 dark:text-gray-100 leading-tight">
@@ -67,64 +66,50 @@ export default function Home() {
   }, [dispatch, favoriteCategories]);
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-200 dark:from-gray-950 dark:to-gray-800 text-gray-900 dark:text-gray-100 transition-colors duration-300">
+    <> {/* Removed the outer div, Layout component now provides the overall structure and styling */}
       <Head>
-        <title>Personalized Content Dashboard</title>
+        <title>Personalized Content Feed</title> {/* Updated title */}
         <meta name="description" content="Your personalized content feed" />
         <link rel="icon" href="/favicon.ico" />
       </Head>
 
-      <header className="
-        py-5 px-8 flex justify-between items-center
-        bg-white dark:bg-gray-800 shadow-xl
-        rounded-b-2xl
-        sticky top-0 z-10
-      ">
-        <h1 className="text-3xl font-bold text-indigo-700 dark:text-indigo-400">
-          My Dashboard
-        </h1>
-        <DarkModeToggle />
-      </header>
+      <h2 className="text-4xl font-bold mb-8 text-center text-indigo-800 dark:text-indigo-300">
+        Your Personalized Feed
+      </h2>
 
-      <main className="container mx-auto p-8">
-        <h2 className="text-4xl font-bold mb-8 text-center text-indigo-800 dark:text-indigo-300">
-          Your Personalized Feed
-        </h2>
-
-        {loading && (
-          <div className="flex justify-center items-center py-10">
-            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-indigo-500"></div>
-            <p className="ml-4 text-lg text-gray-600 dark:text-gray-300">Loading amazing content...</p>
-          </div>
-        )}
-        {error && <p className="text-center text-red-500 text-lg font-medium">Error: {error}</p>}
-
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-8">
-          {news.map((article) => (
-            <ContentCard
-              key={article.url}
-              title={article.title}
-              description={article.description}
-              imageUrl={article.urlToImage}
-              url={article.url}
-            />
-          ))}
-          {movies.map((movie) => (
-            <ContentCard
-              key={movie.id}
-              title={movie.title}
-              description={movie.overview}
-              imageUrl={movie.poster_path}
-              url={`https://www.themoviedb.org/movie/${movie.id}`}
-            />
-          ))}
-          {!loading && news.length === 0 && movies.length === 0 && !error && (
-            <p className="col-span-full text-center text-gray-500 dark:text-gray-400 text-lg py-10">
-              No content available. Please ensure your API keys are correct and try again.
-            </p>
-          )}
+      {loading && (
+        <div className="flex justify-center items-center py-10">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-indigo-500"></div>
+          <p className="ml-4 text-lg text-gray-600 dark:text-gray-300">Loading amazing content...</p>
         </div>
-      </main>
-    </div>
+      )}
+      {error && <p className="text-center text-red-500 text-lg font-medium">Error: {error}</p>}
+
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-8">
+        {news.map((article) => (
+          <ContentCard
+            key={article.url}
+            title={article.title}
+            description={article.description}
+            imageUrl={article.urlToImage}
+            url={article.url}
+          />
+        ))}
+        {movies.map((movie) => (
+          <ContentCard
+            key={movie.id}
+            title={movie.title}
+            description={movie.overview}
+            imageUrl={movie.poster_path}
+            url={`https://www.themoviedb.org/movie/${movie.id}`}
+          />
+        ))}
+        {!loading && news.length === 0 && movies.length === 0 && !error && (
+          <p className="col-span-full text-center text-gray-500 dark:text-gray-400 text-lg py-10">
+            No content available. Please ensure your API keys are correct and try again.
+          </p>
+        )}
+      </div>
+    </>
   );
 }

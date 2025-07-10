@@ -1,13 +1,14 @@
 import { configureStore } from '@reduxjs/toolkit';
 import preferencesReducer from './features/preferences/preferencesSlice';
-import contentReducer from './features/content/contentSlice'; // Assuming you have a content slice
+import contentReducer from './features/content/contentSlice';
+import favoritesReducer from './features/favorites/favoritesSlice'; // Assuming you have a content slice
 
 export const store = configureStore({
   reducer: {
     preferences: preferencesReducer,
-    content: contentReducer, // Add your content slice here
+    content: contentReducer,
     
-    // Add other reducers here as needed
+    favorites: favoritesReducer,
   },
   // Optional: Add middleware, devtools config, etc.
 });

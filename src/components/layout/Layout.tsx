@@ -7,18 +7,19 @@ interface LayoutProps {
 }
 
 const Layout: React.FC<LayoutProps> = ({ children }) => {
-  // We'll add a state for mobile sidebar toggle later if needed
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
 
   return (
-    <div className="flex min-h-screen">
-      {/* Mobile Sidebar Toggle Button (Hidden on larger screens) */}
+    <div className="flex min-h-screen bg-gradient-to-br from-gray-50 to-gray-200 dark:from-gray-950 dark:to-gray-800 text-gray-900 dark:text-gray-100 transition-colors duration-300">
+
+      {/* Mobile Sidebar Toggle Button */}
       <button
         onClick={() => setIsSidebarOpen(!isSidebarOpen)}
         className="
-          md:hidden fixed top-5 left-5 z-40 p-2 rounded-full
-          bg-indigo-500 text-white shadow-lg
+          md:hidden fixed top-4 left-4 z-50 p-2 rounded-full
+          bg-indigo-600 text-white shadow-lg
           transition-all duration-300 ease-in-out
+          hover:scale-105
         "
         aria-label="Toggle Sidebar"
       >
@@ -38,12 +39,15 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
         </svg>
       </button>
 
-      {/* Sidebar - Use absolute positioning and transform for responsive show/hide */}
+      {/* Sidebar Container */}
       <div className={`
-        fixed inset-y-0 left-0 transform ${isSidebarOpen ? 'translate-x-0' : '-translate-x-full'}
-        md:relative md:translate-x-0
-        transition-transform duration-300 ease-in-out
-        z-30 /* Higher than main content but lower than mobile toggle */
+        fixed inset-y-0 left-0
+        transform transition-transform duration-300 ease-in-out
+        z-40
+        ${isSidebarOpen ? 'translate-x-0' : '-translate-x-full'}
+        ${isSidebarOpen ? 'block' : 'hidden'} md:block /* Crucial: Hide on mobile when closed, show when open/on MD+ */
+        md:relative md:translate-x-0 /* On medium and up, sidebar is relative and visible */
+        md:z-auto
       `}>
         <Sidebar />
       </div>
@@ -52,15 +56,23 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
       {isSidebarOpen && (
         <div
           onClick={() => setIsSidebarOpen(false)}
-          className="fixed inset-0 bg-black bg-opacity-50 z-20 md:hidden"
+          className="fixed inset-0 bg-black bg-opacity-50 z-30 md:hidden"
         ></div>
       )}
 
+      {/* Main Content Area (Header + Page Content) */}
       <div className="flex flex-col flex-1">
         <Header />
-        <main className="flex-1 p-8"> {/* Main content area */}
+        <div className="
+          flex-1 mx-auto w-full
+          px-4 sm:px-6 md:px-8 py-8
+          max-w-full
+          lg:max-w-screen-xl
+          xl:max-w-screen-2xl
+          2xl:max-w-screen-2xl
+          ">
           {children}
-        </main>
+        </div>
       </div>
     </div>
   );
