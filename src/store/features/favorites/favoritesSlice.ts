@@ -1,10 +1,8 @@
 // src/store/features/favorites/favoritesSlice.ts
 import { createSlice, PayloadAction } from '@reduxjs/toolkit';
-// Assuming Article and Movie types are already defined in contentSlice
-// import { Article, Movie } from '../content/contentSlice'; // uncomment if you need them directly here for types
 
 interface FavoriteItem {
-  id: string; // Unique identifier (e.g., URL for news, TMDB ID for movie)
+  id: string;
   type: 'news' | 'movie';
   title: string;
   description?: string | null;
@@ -16,25 +14,9 @@ interface FavoritesState {
   items: FavoriteItem[];
 }
 
-// Function to load state from localStorage
-const loadFavoritesFromLocalStorage = (): FavoriteItem[] => {
-  if (typeof window !== 'undefined') { // Check if window object is available (i.e., not during SSR)
-    try {
-      const serializedState = localStorage.getItem('favorites');
-      if (serializedState === null) {
-        return []; // No favorites found, return empty array
-      }
-      return JSON.parse(serializedState);
-    } catch (e) {
-      console.error("Could not load favorites from localStorage", e);
-      return [];
-    }
-  }
-  return []; // Return empty array if not in browser environment
-};
-
+// Initial state now defaults, NOT loading from localStorage immediately
 const initialState: FavoritesState = {
-  items: loadFavoritesFromLocalStorage(), // Initialize state by loading from localStorage
+  items: [], // Default to empty array on both server and client initially
 };
 
 const favoritesSlice = createSlice({
@@ -49,8 +31,12 @@ const favoritesSlice = createSlice({
     removeFavorite: (state, action: PayloadAction<string>) => {
       state.items = state.items.filter(item => item.id !== action.payload);
     },
+    // NEW: Action to rehydrate state from persisted data
+    rehydrateFavorites: (state, action: PayloadAction<FavoriteItem[]>) => {
+      state.items = action.payload;
+    },
   },
 });
 
-export const { addFavorite, removeFavorite } = favoritesSlice.actions;
+export const { addFavorite, removeFavorite, rehydrateFavorites } = favoritesSlice.actions; // Export new action
 export default favoritesSlice.reducer;

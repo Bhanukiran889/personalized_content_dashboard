@@ -3,35 +3,14 @@ import { createSlice, PayloadAction } from '@reduxjs/toolkit';
 
 export interface PreferencesState {
   darkMode: boolean;
-  favoriteCategories: string[]; // Add this to store chosen news categories
+  favoriteCategories: string[];
 }
 
-// Key for localStorage
-const LOCAL_STORAGE_PREFERENCES_KEY = 'userPreferences';
-
-// Function to load preferences from localStorage
-const loadPreferencesFromLocalStorage = (): PreferencesState => {
-  if (typeof window !== 'undefined') {
-    try {
-      const serializedState = localStorage.getItem(LOCAL_STORAGE_PREFERENCES_KEY);
-      if (serializedState === null) {
-        return { darkMode: false, favoriteCategories: [] }; // Default state if nothing found
-      }
-      // Parse, and provide default if a property is missing (e.g., if favoriteCategories was just added)
-      const parsedState = JSON.parse(serializedState);
-      return {
-        darkMode: parsedState.darkMode ?? false,
-        favoriteCategories: parsedState.favoriteCategories ?? [],
-      };
-    } catch (e) {
-      console.error("Could not load preferences from localStorage", e);
-      return { darkMode: false, favoriteCategories: [] }; // Fallback to default on error
-    }
-  }
-  return { darkMode: false, favoriteCategories: [] }; // Default for SSR
+// Initial state now defaults, NOT loading from localStorage immediately
+const initialState: PreferencesState = {
+  darkMode: false, // Default to false on both server and client initially
+  favoriteCategories: [], // Default to empty array initially
 };
-
-const initialState: PreferencesState = loadPreferencesFromLocalStorage();
 
 const preferencesSlice = createSlice({
   name: 'preferences',
@@ -40,12 +19,16 @@ const preferencesSlice = createSlice({
     toggleDarkMode: (state) => {
       state.darkMode = !state.darkMode;
     },
-    // Action to set favorite categories
     setFavoriteCategories: (state, action: PayloadAction<string[]>) => {
       state.favoriteCategories = action.payload;
+    },
+    // NEW: Action to rehydrate state from persisted data (e.g., from localStorage)
+    rehydratePreferences: (state, action: PayloadAction<PreferencesState>) => {
+      state.darkMode = action.payload.darkMode;
+      state.favoriteCategories = action.payload.favoriteCategories;
     },
   },
 });
 
-export const { toggleDarkMode, setFavoriteCategories } = preferencesSlice.actions;
+export const { toggleDarkMode, setFavoriteCategories, rehydratePreferences } = preferencesSlice.actions; // Export new action
 export default preferencesSlice.reducer;
